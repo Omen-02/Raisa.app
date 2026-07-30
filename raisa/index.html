@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAISA_Raport</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #709443; padding-bottom: 10px; }
+        .sub { font-size: 14px; color: #555; margin-bottom: 20px; }
+        .upload-section { background: #ebf5fb; border: 2px dashed #709443; padding: 20px; border-radius: 6px; text-align: center; margin-bottom: 20px; }
+        .control-section { margin-bottom: 20px; display: none; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd; }
+        label { font-weight: bold; margin-right: 10px; font-size: 13px; }
+        select, input[type="text"].search-input { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+        
+        .cso-selection-container { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; background: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; }
+        .search-box-wrapper { position: relative; display: flex; align-items: center; }
+        .search-input { width: 320px; padding-left: 30px !important; cursor: help; }
+        .search-icon { position: absolute; left: 10px; color: #888; font-size: 14px; }
+        
+        .month-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; background: #eaf2f8; padding: 12px; border-radius: 6px; border: 1px solid #d6eaf8; }
+        .month-controls select { width: 100%; font-weight: bold; color: #2c3e50; }
+
+        .input-text-area { width: 100%; height: 60px; padding: 8px; margin-top: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; resize: vertical; }
+        .output-container { display: none; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 20px; }
+        @media(max-width: 992px) { .output-container { grid-template-columns: 1fr; } }
+        
+        .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-title { font-weight: bold; font-size: 16px; margin-bottom: 15px; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .btn { background-color: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn:hover { background-color: #219653; }
+        .btn-reset { background-color: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; margin-left: 10px; }
+        .btn-reset:hover { background-color: #c0392b; }
+        
+        .rapot-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .rapot-table th, .rapot-table td { border: 1px solid #444; padding: 5px 8px; text-align: left; }
+        .bg-green-header { background-color: #709443; color: white; text-align: center; font-weight: bold; font-size: 14px; }
+        .bg-gray-sub { background-color: #f2f2f2; font-weight: bold; }
+        .bg-section-title { background-color: #e2efda; font-weight: bold; color: #375623; }
+        .bg-compare-title { background-color: #fcf3cf; font-weight: bold; color: #9a7d0a; text-align: center; }
+        .val-col { text-align: center; width: 35%; font-weight: bold; }
+        
+        .input-inline { width: 100%; border: none; background: transparent; text-align: center; font-weight: bold; font-size: 12px; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; font-size: 12px; margin: 0; white-space: pre-wrap; }
+        .info-box { background-color: #e8f8f5; border-left: 4px solid #1abc9c; padding: 10px 15px; margin-bottom: 15px; font-size: 13px; }
+        .trend-up { color: #27ae60; font-weight: bold; }
+        .trend-down { color: #c0392b; font-weight: bold; }
+        .trend-flat { color: #7f8c8d; font-weight: bold; }
+        #toast-notification {
+            visibility: hidden;
+            min-width: 280px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 14px;
+            position: fixed;
+            z-index: 9999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            transition: visibility 0.5s, opacity 0.5s ease-in-out;
+            opacity: 0;
+        }
+        #toast-notification.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        #toast-notification.error {
+            background-color: #e74c3c; /* Warna merah untuk peringatan/gagal */
+        }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>RAISA</h2>
+    <div class="sub">Raport Analysis Integrated System Automation_org.awam</div>
+    
+    <div class="upload-section">
+        <p><strong>Upload :</strong> (jika tidak auto). file excel raport secara manual</p>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <input type="file" id="upload-excel" accept=".xlsx, .xls" />
+            <button class="btn-reset" onclick="resetAllData()">🔄 Reset Semua Data</button>
+        </div>
+    </div>
+
+    <div class="control-section" id="control-panel">
+        <div class="info-box" id="detect-info">Memuat data...</div>
+
+        <div class="month-controls">
+            <div>
+                <label>📅 Laporan Bulan (Utama):</label>
+                <select id="main-month-select" onchange="onMonthChange()"></select>
+            </div>
+            <div>
+                <label>⚖️ Bandingkan Dengan (Bulan Lalu):</label>
+                <select id="compare-month-select" onchange="updateOutputs()">
+                    <option value="">-- Tidak Ada Perbandingan --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="cso-selection-container">
+            <div>
+                <label for="cso-select"><strong>Cari Data:</strong> Pilih CSO:</label>
+                <select id="cso-select" style="width: 320px;">
+                    <option value="">-- Pilih CSO --</option>
+                </select>
+            </div>
+            <div class="search-box-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-cso" class="search-input" placeholder="Cari Nama CSO atau Tim ..." oninput="filterCsoList()" />
+            </div>
+            <span id="search-count" style="font-size: 12px; color: #27ae60; font-weight: bold;"></span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 17px;">
+            <div>
+                <label>Peringkat CSO :</label>
+                <input type="text" id="manual-rank" class="input-inline" style="border: 1px solid #ccc; height: 35px; background: white;" value="-" oninput="updateOutputs()">
+            </div>
+            <div>
+                <label>Finding No:</label>
+                <input type="text" id="manual-finding" class="input-inline" style="border: 1px solid #ccc; height: 35px; background: white;" value="-" oninput="updateOutputs()">
+            </div>
+            <div>
+                <label>Bulan:</label>
+                <input type="text" id="manual-date" class="input-inline" style="border: 1px solid #ccc; height: 35px; background: white;" value="-" readonly>
+            </div>
+            <div>
+                <label id="label-avg">AVG Nilai All CSO :</label>
+                <input type="text" id="avg-all" class="input-inline" style="border: 1px solid #ccc; height: 35px; background: white;" value="-" readonly>
+            </div>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <label>IMPROVEMENT CSO:</label>
+            <textarea id="input-improvement" class="input-text-area" oninput="updateOutputs()"></textarea>
+            
+            <label>COMMITMENT CSO:</label>
+            <textarea id="input-commitment" class="input-text-area" oninput="updateOutputs()"></textarea>
+            
+            <label>Team Leader Note(s):</label>
+            <textarea id="input-notes" class="input-text-area" oninput="updateOutputs()">SPV akan melakukan monitoring performance CSO hingga mencapai target bulan berikutnya.</textarea>
+        </div>
+    </div>
+
+    <div class="output-container" id="output-panel">
+        <div class="card">
+            <div class="card-title">Review tabel LTM RAPOT</div>
+            <table class="rapot-table" id="table-preview"></table>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span>Review Ltm Raport </span>
+                <div>
+                    <button class="btn" onclick="copyText()">Copy Text</button>
+                    <button class="btn" style="background-color:#2980b9;" onclick="downloadTxt()">Download .txt</button>
+                </div>
+            </div>
+            <pre id="text-preview"></pre>
+        </div>
+    </div>
+</div>
+<div id="toast-notification">Pesan notifikasi...</div>
+<div class="footer">
+    <p>© 2026 RAISA_Raport by Owam app. </p>
+</div>
+
+<script>
+    let appDatabase = {}; 
+
+    function showToast(message, isError = false) {
+        let toast = document.getElementById('toast-notification');
+        toast.textContent = message;
+        toast.className = "show" + (isError ? " error" : "");
+        
+        setTimeout(function() {
+            toast.className = toast.className.replace("show", "");
+        }, 6000); 
+    }
+
+    // --- AUTO-LOAD FILE DI FOLDER MENGGUNAKAN ASYNC/AWAIT ---
+    window.addEventListener('DOMContentLoaded', async function() {
+       if (window.location.protocol === 'file:') {
+            // Langsung tampilkan info manual & toast tanpa mencoba fetch yang pasti diblokir
+            document.getElementById('detect-info').innerHTML = `<strong>Info:</strong> Mode manual aktif (Dibuka dari folder lokal). Silakan gunakan tombol upload di atas.`;
+            showToast("Mode Manual Aktif: Silakan upload file Excel secara manual.", true);
+            return; // Hentikan proses agar tidak error
+        }
+
+        // 2. Jika dibuka lewat server (http://), baru jalankan auto-load normal
+        const localFilesInFolder = [
+            { label: "Januari 2026", filename: "raport_jan_26.xlsx" },
+            { label: "Februari 2026", filename: "raport_feb_26.xlsx" },
+            { label: "Juni 2026", filename: "raport_juni_26.xlsx" },
+            { label: "Juli 2026", filename: "raport_juli_26.xlsx" }
+        ];
+        let loadedCount = 0;
+
+        for (const fileInfo of localFilesInFolder) {
+            try {
+                let response = await fetch(fileInfo.filename);
+                if (response.ok) {
+                    let buffer = await response.arrayBuffer();
+                    let data = new Uint8Array(buffer);
+                    let workbook = XLSX.read(data, { type: 'array', cellNF: true, cellText: true });
+                    parseExcelDataSilent(workbook, fileInfo.label, fileInfo.filename);
+                    loadedCount++;
+                }
+            } catch (err) {
+                console.log(`Auto-load dilewati untuk: ${fileInfo.filename}`);
+            }
+        }
+
+        if (loadedCount > 0) {
+            let firstMonth = Object.keys(appDatabase)[0];
+            updateMonthDropdowns(firstMonth);
+            document.getElementById('control-panel').style.display = 'block';
+        } else {
+            document.getElementById('detect-info').innerHTML = `<strong>Info:</strong> Mode manual aktif. Silakan pilih file Excel melalui tombol upload di atas.`;
+        }
+    });
+
+    document.getElementById('upload-excel').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        let fileName = file.name;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const data = evt.target.result;
+                const workbook = XLSX.read(data, { type: 'binary', cellNF: true, cellText: true });
+                parseExcelDataFull(workbook, fileName);
+            } catch(err) {
+                alert('Gagal membaca file Excel. Error: ' + err.message);
+                console.error(err);
+            }
+        };
+        reader.readAsBinaryString(file);
+        e.target.value = ''; 
+    });
+
+    function parseExcelDataFull(workbook, fileName) {
+        processWorkbookToDatabase(workbook, null, fileName);
+    }
+
+    function parseExcelDataSilent(workbook, labelBulan, fileName) {
+        processWorkbookToDatabase(workbook, labelBulan, fileName);
+    }
+
+    function processWorkbookToDatabase(workbook, presetLabel, fileName) {
+        let localData = [];
+        let localRankings = {};
+        let localTeamOrders = {}; 
+        let foundDateStr = presetLabel || "";
+        let sumAvg = 0;
+        let countAvg = 0;
+        let localShortMonth = "jun";
+        let localShortYear = "26";
+
+        let monthsFull = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        let monthsShort = ["jan", "feb", "mar", "apr", "mei", "jun", "jul", "agu", "sep", "okt", "nov", "des"];
+
+        if (!foundDateStr && fileName) {
+            let match = fileName.match(/(jan|feb|mar|apr|mei|jun|jul|agu|sep|okt|nov|des)[a-z]*[\s_-]*(\d{2,4})/i);
+            if (match) {
+                localShortMonth = match[1].toLowerCase();
+                let yearStr = match[2];
+                localShortYear = yearStr.length === 4 ? yearStr.slice(-2) : yearStr;
+                let fullYear = yearStr.length === 2 ? "20" + yearStr : yearStr;
+                let monthIdx = monthsShort.indexOf(localShortMonth);
+                foundDateStr = (monthIdx !== -1 ? monthsFull[monthIdx] : localShortMonth) + " " + fullYear;
+            }
+        }
+
+        workbook.SheetNames.forEach(function(sheetName) {
+            const worksheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' });
+            let sheetLower = sheetName.toLowerCase();
+
+            if (!foundDateStr) {
+                for(let r = 0; r < rows.length; r++) {
+                    for(let c = 0; c < rows[r].length; c++) {
+                        let strC = String(rows[r][c]).trim();
+                        if ((strC.includes('202') || strC.includes('/20')) && !strC.includes('NILAI')) {
+                            let cleanDateStr = strC.split(' ')[0].replace(/-/g, '/');
+                            let d = new Date(cleanDateStr);
+                            if (!isNaN(d.getTime())) {
+                                localShortMonth = monthsShort[d.getMonth()];
+                                localShortYear = String(d.getFullYear()).slice(-2);
+                                foundDateStr = monthsFull[d.getMonth()] + " " + d.getFullYear();
+                                break;
+                            }
+                        }
+                    }
+                    if(foundDateStr) break;
+                }
+            }
+
+            if (sheetLower.includes('ranking')) {
+                let headerRowIndex = -1;
+                for(let i=0; i<Math.min(rows.length, 10); i++) {
+                    if(rows[i].some(cell => String(cell).toLowerCase().trim() === 'nama')) {
+                        headerRowIndex = i; break;
+                    }
+                }
+                if (headerRowIndex !== -1) {
+                    let noIdx = rows[headerRowIndex].findIndex(c => String(c).toLowerCase().trim() === 'no');
+                    let namaIdx = rows[headerRowIndex].findIndex(c => String(c).toLowerCase().trim() === 'nama');
+                    if (noIdx !== -1 && namaIdx !== -1) {
+                        for(let i = headerRowIndex + 1; i < rows.length; i++) {
+                            let nama = String(rows[i][namaIdx] || '').trim().toLowerCase();
+                            let no = String(rows[i][noIdx] || '').trim();
+                            if (nama && no && !isNaN(parseInt(no))) {
+                                localRankings[nama] = parseInt(no);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (sheetLower.includes('raport') || sheetLower.includes('rapot')) {
+                let currentLeaderCode = "";
+                let teamCounter = 0;
+                for (let r = 0; r < rows.length; r++) {
+                    let row = rows[r];
+                    if (!row) continue;
+                    for (let c = 0; c < row.length; c++) {
+                        let cellVal = String(row[c] || '').trim();
+                        let lowerVal = cellVal.toLowerCase();
+                        if (cellVal.includes('(') && cellVal.includes(')') && !lowerVal.includes('bulan') && !lowerVal.includes('score')) {
+                            let matchCode = cellVal.match(/\(([^)]+)\)/);
+                            currentLeaderCode = matchCode ? matchCode[1].trim() : "";
+                            teamCounter = 0; 
+                            break; 
+                        }
+                    }
+                    for (let c = 0; c < row.length; c++) {
+                        let cellVal = String(row[c] || '').trim();
+                        let lowerVal = cellVal.toLowerCase();
+                        if (['nama cso', 'kehadiran', 'bobot score', 'bulan ini', 'penilaian individu', 'no', 'total', 'bobot'].includes(lowerVal) || cellVal.startsWith('2026') || cellVal.startsWith('202')) break; 
+                        if (isNaN(parseFloat(cellVal.replace('%', ''))) && cellVal.length > 2) {
+                            let next1 = String(row[c+1] || '').trim();
+                            let next2 = String(row[c+2] || '').trim();
+                            if ((next1 && !isNaN(parseFloat(next1.replace('%','')))) || (next2 && !isNaN(parseFloat(next2.replace('%',''))))) {
+                                teamCounter++; 
+                                localTeamOrders[cellVal.toLowerCase()] = { order: teamCounter, code: currentLeaderCode };
+                                break; 
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (sheetLower.includes('nilai cso')) {
+                let headerRow = -1, targetCol = -1;
+                for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                    for (let c = 0; c < rows[i].length; c++) {
+                        if (String(rows[i][c]).toUpperCase().includes('NILAI AKHIR ALL')) {
+                            headerRow = i; targetCol = c; break;
+                        }
+                    }
+                    if (targetCol !== -1) break;
+                }
+                if (targetCol !== -1) {
+                    for (let i = headerRow + 1; i < rows.length; i++) {
+                        let val = rows[i][targetCol];
+                        if (val !== '' && val !== undefined) {
+                            let clean = String(val).replace('%', '').trim();
+                            let parsed = parseFloat(clean);
+                            if (!isNaN(parsed)) {
+                                let finalVal = String(val).includes('%') ? parsed/100 : (parsed > 1.5 ? parsed/100 : parsed);
+                                if (finalVal > 0) { sumAvg += finalVal; countAvg++; }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let currentLeader = "TIM CSO", currentLeaderCode = "";
+            function parsePercentStr(val) {
+                if(val === undefined || val === null || val === "") return 0;
+                let clean = String(val).replace('%', '').trim();
+                let num = parseFloat(clean);
+                if(isNaN(num)) return 0;
+                if (String(val).includes('%')) { return num / 100; }
+                return num > 1.5 ? num / 100 : num;
+            }
+
+            for (let r = 0; r < rows.length; r++) {
+                let row = rows[r];
+                if (!row) continue;
+                let nameVal = "", nameIdx = -1;
+                for (let c = 0; c < row.length; c++) {
+                    let cellVal = String(row[c] || '').trim();
+                    if (!cellVal) continue;
+                    let lowerVal = cellVal.toLowerCase();
+                    if (cellVal.includes('(') && cellVal.includes(')') && !lowerVal.includes('bulan ini') && !lowerVal.includes('score')) {
+                        currentLeader = cellVal;
+                        let matchCode = cellVal.match(/\(([^)]+)\)/);
+                        currentLeaderCode = matchCode ? matchCode[1].trim() : "";
+                        break;
+                    }
+                    if (['nama cso', 'kehadiran', 'bobot score', 'bulan ini', 'penilaian individu', 'no', 'total', 'bobot'].includes(lowerVal) || lowerVal.startsWith('2026')) continue; 
+                    if (isNaN(parseFloat(cellVal.replace('%', '')))) {
+                        let next1 = String(row[c+1] || '').trim();
+                        let next2 = String(row[c+2] || '').trim();
+                        if ((next1 && !isNaN(parseFloat(next1.replace('%','')))) || (next2 && !isNaN(parseFloat(next2.replace('%',''))))) {
+                            if(cellVal.length > 2) { nameVal = cellVal; nameIdx = c; break; }
+                        }
+                    }
+                }
+                if (nameVal && nameIdx !== -1) {
+                    let metricStart = nameIdx + 1; 
+                    let nAkhir = parsePercentStr(row[metricStart + 12] || row[metricStart + 10]);
+                    let dataCSO = {
+                        nama: nameVal, leader: currentLeader, leaderCode: currentLeaderCode,
+                        metrics: [
+                            { name: "KEHADIRAN", value: parsePercentStr(row[metricStart]) },
+                            { name: "KEPATUHAN", value: parsePercentStr(row[metricStart + 1]) },
+                            { name: "PRODUKTIVITAS", value: parsePercentStr(row[metricStart + 2]) },
+                            { name: "PEMREK", value: parsePercentStr(row[metricStart + 3]) },
+                            { name: "SL 4.30 MENIT", value: parsePercentStr(row[metricStart + 4]) },
+                            { name: "NILAI CM", value: parsePercentStr(row[metricStart + 5]) },
+                            { name: "AKURASI", value: parsePercentStr(row[metricStart + 6]) },
+                            { name: "CALL TERPUTUS", value: parsePercentStr(row[metricStart + 7]) },
+                            { name: "PUJIAN", value: parsePercentStr(row[metricStart + 8]) },
+                            { name: "CROSSELING", value: parsePercentStr(row[metricStart + 9]) },
+                            { name: "ST-SP", value: parsePercentStr(row[metricStart + 11]) }
+                        ],
+                        nilaiAkhirAll: nAkhir
+                    };
+                    if(!localData.find(x => x.nama === nameVal)) localData.push(dataCSO);
+                }
+            }
+        });
+
+        if (!foundDateStr) foundDateStr = "Data Baru";
+        let avgAllFinal = countAvg > 0 ? (sumAvg / countAvg) : 0;
+
+        appDatabase[foundDateStr] = {
+            csoList: localData,
+            rankings: localRankings,
+            teamOrders: localTeamOrders,
+            avgAll: avgAllFinal,
+            shortMonth: localShortMonth,
+            shortYear: localShortYear
+        };
+
+        if (localData.length > 0) {
+            updateMonthDropdowns(foundDateStr);
+            document.getElementById('control-panel').style.display = 'block';
+            alert(`Berhasil memuat data ${foundDateStr} (${localData.length} CSO).`);
+        }
+    }
+
+    function updateMonthDropdowns(selectedMonth) {
+        const mainSelect = document.getElementById('main-month-select');
+        const compareSelect = document.getElementById('compare-month-select');
+        let oldCompare = compareSelect.value;
+        
+        mainSelect.innerHTML = '';
+        compareSelect.innerHTML = '<option value="">-- Tidak Ada Perbandingan --</option>';
+
+        let months = Object.keys(appDatabase);
+        months.forEach(m => {
+            let opt1 = document.createElement('option');
+            opt1.value = m; opt1.textContent = m;
+            if(m === selectedMonth) opt1.selected = true;
+            mainSelect.appendChild(opt1);
+
+            let opt2 = document.createElement('option');
+            opt2.value = m; opt2.textContent = m;
+            if(m === oldCompare) opt2.selected = true;
+            compareSelect.appendChild(opt2);
+        });
+
+        onMonthChange();
+    }
+
+    function onMonthChange() {
+        const mainMonth = document.getElementById('main-month-select').value;
+        if(!mainMonth || !appDatabase[mainMonth]) return;
+
+        let dataObj = appDatabase[mainMonth];
+        document.getElementById('manual-date').value = mainMonth;
+        document.getElementById('avg-all').value = formatDisplayPercent(dataObj.avgAll);
+        document.getElementById('label-avg').textContent = `AVG Nilai All CSO (${mainMonth}) :`;
+        
+        document.getElementById('detect-info').innerHTML = `
+            <strong>File Terbaca!</strong> Bulan <strong>${mainMonth}</strong>, total ditemukan <strong>${dataObj.csoList.length} Data CSO</strong>.`;
+
+        document.getElementById('search-cso').value = '';
+        populateSelectOptions(dataObj.csoList);
+        
+        document.getElementById('output-panel').style.display = 'none';
+        document.getElementById('input-improvement').value = '';
+        document.getElementById('input-commitment').value = '';
+        document.getElementById('manual-rank').value = '-';
+        document.getElementById('manual-finding').value = '-';
+    }
+
+    function populateSelectOptions(csoList) {
+        const select = document.getElementById('cso-select');
+        select.innerHTML = '<option value="">-- Pilih CSO --</option>';
+        csoList.forEach(cso => {
+            let option = document.createElement('option');
+            option.value = cso.nama;
+            option.textContent = `${cso.nama} (${cso.leaderCode || 'CSO'})`;
+            select.appendChild(option);
+        });
+        document.getElementById('search-count').textContent = `(Tersedia: ${csoList.length} CSO)`;
+        select.removeEventListener('change', onCsoChange);
+        select.addEventListener('change', onCsoChange);
+    }
+
+    function filterCsoList() {
+        const keyword = document.getElementById('search-cso').value.toLowerCase().trim();
+        const mainMonth = document.getElementById('main-month-select').value;
+        if(!mainMonth || !appDatabase[mainMonth]) return;
+        let fullList = appDatabase[mainMonth].csoList;
+
+        if (!keyword) {
+            populateSelectOptions(fullList);
+            return;
+        }
+
+        const filtered = fullList.filter(cso => {
+            return cso.nama.toLowerCase().includes(keyword) || 
+                   cso.leader.toLowerCase().includes(keyword) || 
+                   cso.leaderCode.toLowerCase().includes(keyword);
+        });
+
+        populateSelectOptions(filtered);
+        if (filtered.length === 1) {
+            document.getElementById('cso-select').value = filtered[0].nama;
+            document.getElementById('cso-select').dispatchEvent(new Event('change'));
+        }
+    }
+
+    function onCsoChange() {
+        if(this.value) {
+            const mainMonth = document.getElementById('main-month-select').value;
+            let dataObj = appDatabase[mainMonth];
+            const cso = dataObj.csoList.find(d => d.nama === this.value);
+            if (cso) {
+                let csoNameLower = cso.nama.toLowerCase();
+                let rankVal = dataObj.rankings[csoNameLower] !== undefined ? dataObj.rankings[csoNameLower] : '-';
+                document.getElementById('manual-rank').value = rankVal;
+
+                let teamOrderData = dataObj.teamOrders[csoNameLower];
+                let orderNum = teamOrderData ? teamOrderData.order : 1;
+                let teamCode = (teamOrderData && teamOrderData.code) ? teamOrderData.code : (cso.leaderCode || 'CSO');
+                let paddedRank = String(orderNum).trim();
+                if (paddedRank.length < 2) paddedRank = '0' + paddedRank;
+                
+                let findingNo = `${paddedRank}/${dataObj.shortMonth}/${dataObj.shortYear}/${teamCode}`.toUpperCase();
+                document.getElementById('manual-finding').value = findingNo;
+
+                document.getElementById('input-improvement').value = '';
+                document.getElementById('input-commitment').value = '';
+            }
+            updateOutputs();
+        } else {
+            document.getElementById('output-panel').style.display = 'none';
+        }
+    }
+
+    function formatDisplayPercent(val) {
+        return (val * 100).toFixed(2) + '%';
+    }
+
+    function getTrendIcon(valNow, valOld, metricName) {
+        if(valNow === valOld) return '<span class="trend-flat">(--)</span>';
+        let isSTSP = (metricName === "ST-SP");
+        if(isSTSP) {
+            if(valNow < valOld) return '<span class="trend-up">▲ Naik (Lebih Baik)</span>';
+            return '<span class="trend-down">▼ Turun</span>';
+        } else {
+            if(valNow > valOld) return '<span class="trend-up">▲ Naik</span>';
+            return '<span class="trend-down">▼ Turun</span>';
+        }
+    }
+
+    function updateOutputs() {
+        const csoName = document.getElementById('cso-select').value;
+        const mainMonth = document.getElementById('main-month-select').value;
+        const compareMonth = document.getElementById('compare-month-select').value;
+        if(!csoName || !mainMonth || !appDatabase[mainMonth]) return;
+
+        const dataObj = appDatabase[mainMonth];
+        const cso = dataObj.csoList.find(d => d.nama === csoName);
+        if(!cso) return;
+
+        let compareCso = null;
+        if(compareMonth && compareMonth !== mainMonth && appDatabase[compareMonth]) {
+            compareCso = appDatabase[compareMonth].csoList.find(d => d.nama === csoName);
+        }
+
+        let rankVal = document.getElementById('manual-rank').value;
+        let findingVal = document.getElementById('manual-finding').value;
+        let dateVal = document.getElementById('manual-date').value;
+        let avgAllVal = document.getElementById('avg-all').value;
+
+        let kelebihanList = [], kekuranganList = [];
+        cso.metrics.forEach(m => {
+            if (m.name === "ST-SP") {
+                if (m.value === 0) kelebihanList.push(m.name); else kekuranganList.push(m.name);
+            } else {
+                if (m.value >= 1.0) kelebihanList.push(m.name); else kekuranganList.push(m.name);
+            }
+        });
+
+        let improvementTextarea = document.getElementById('input-improvement');
+        if (!improvementTextarea.value.trim()) {
+            if (kekuranganList.length > 0) {
+                let kekuranganStr = kekuranganList.join(', ').toLowerCase();
+                improvementTextarea.value = `CSO akan konsisten menerapkan NPS sesuai dengan ketentuan yang berlaku.\nCSO akan meningkatkan nilai ${kekuranganStr} di bulan selanjutnya.`;
+            } else {
+                improvementTextarea.value = `CSO akan konsisten mempertahankan performa dan menerapkan NPS sesuai ketentuan yang berlaku.`;
+            }
+        }
+
+        let commitmentTextarea = document.getElementById('input-commitment');
+        if (!commitmentTextarea.value.trim()) {
+            if (kelebihanList.length > 0) {
+                let kelebihanStr = kelebihanList.join(', ').toLowerCase();
+                commitmentTextarea.value = `CSO berkomitmen untuk konsisten menjaga dan meningkatkan target nilai ${kelebihanStr} dibulan berikutnya.`;
+            } else {
+                commitmentTextarea.value = `CSO berkomitmen untuk konsisten menjaga target performa dibulan berikutnya.`;
+            }
+        }
+
+        let improvementText = improvementTextarea.value;
+        let commitmentText = commitmentTextarea.value;
+        let notesText = document.getElementById('input-notes').value;
+
+        const table = document.getElementById('table-preview');
+        let htmlRows = `
+            <tr><th colspan="2" class="bg-green-header">LTM RAPOT (${mainMonth})</th></tr>
+            <tr><td class="bg-gray-sub">Nama CSO</td><td class="val-col" style="text-align:left;">${cso.nama}</td></tr>
+            <tr><td class="bg-gray-sub">Leader / SPV</td><td class="val-col" style="text-align:left;">${cso.leader}</td></tr>
+            <tr><td class="bg-gray-sub">Finding No</td><td class="val-col" style="text-align:left;">${findingVal}</td></tr>
+            <tr><td class="bg-gray-sub">Date Created</td><td class="val-col" style="text-align:left;">${dateVal}</td></tr>
+            <tr><td class="bg-gray-sub">Subject</td><td class="val-col" style="text-align:left;">COACHING RAPOT CSO ${cso.nama}</td></tr>
+            <tr><td>PERINGKAT CSO</td><td class="val-col">${rankVal}</td></tr>
+            <tr><td colspan="2" class="bg-section-title">KELEBIHAN</td></tr>
+        `;
+           
+        let k_count = 0;
+        cso.metrics.forEach(m => {
+            if (kelebihanList.includes(m.name)) {
+                htmlRows += `<tr><td>${m.name}</td><td class="val-col">${formatDisplayPercent(m.value)}</td></tr>`;
+                k_count++;
+            }
+        });
+        if(k_count === 0) htmlRows += `<tr><td colspan="2" style="text-align:center; color:#999; font-style:italic;">Tidak ada</td></tr>`;
+
+        htmlRows += `<tr><td colspan="2" class="bg-section-title">KEKURANGAN</td></tr>`;
+        let kr_count = 0;
+        cso.metrics.forEach(m => {
+            if (kekuranganList.includes(m.name)) {
+                htmlRows += `<tr><td>${m.name}</td><td class="val-col" style="color:#c0392b;">${formatDisplayPercent(m.value)}</td></tr>`;
+                kr_count++;
+            }
+        });
+        if(kr_count === 0) htmlRows += `<tr><td colspan="2" style="text-align:center; color:#999; font-style:italic;">Tidak ada</td></tr>`;
+
+        let textCompareSection = "";
+        if (compareCso) {
+            htmlRows += `<tr><td colspan="2" class="bg-compare-title">⚖️ PERBANDINGAN (${compareMonth} vs ${mainMonth})</td></tr>`;
+            htmlRows += `<tr style="background:#f2f2f2; font-size:11px;"><td style="text-align:center;"><b>Metrik</b></td><td style="text-align:center;"><b>${compareMonth} ➔ ${mainMonth}</b></td></tr>`;
+            textCompareSection += `\n[PERBANDINGAN: ${compareMonth} vs ${mainMonth}]\n`;
+            
+            cso.metrics.forEach(mNow => {
+                let mOld = compareCso.metrics.find(x => x.name === mNow.name);
+                if(mOld) {
+                    let trendStr = getTrendIcon(mNow.value, mOld.value, mNow.name);
+                    htmlRows += `<tr><td>${mNow.name}</td><td class="val-col" style="font-size:11px;">${formatDisplayPercent(mOld.value)} ➔ <b>${formatDisplayPercent(mNow.value)}</b><br>${trendStr}</td></tr>`;
+                    let txtTrend = mNow.value === mOld.value ? "(--)" : ( (mNow.name==="ST-SP" && mNow.value<mOld.value) || (mNow.name!=="ST-SP" && mNow.value>mOld.value) ? "NAIK" : "TURUN" );
+                    textCompareSection += `- ${mNow.name.padEnd(15)}: ${formatDisplayPercent(mOld.value)} -> ${formatDisplayPercent(mNow.value)} (${txtTrend})\n`;
+                }
+            });
+        }
+
+        htmlRows += `
+            <tr><td class="bg-gray-sub">NILAI AKHIR ALL</td><td class="val-col" style="background-color: #fff2cc;">${formatDisplayPercent(cso.nilaiAkhirAll)}</td></tr> 
+            <tr><td class="bg-gray-sub">AVG Nilai All CSO (${dateVal})</td><td class="val-col" style="background-color:#fce4d6; color:#c65911;">${avgAllVal}</td></tr> 
+            <tr><td colspan="2" class="bg-section-title" style="background-color:#d9e1f2; color:#1f4e78;">IMPROVEMENT CSO</td></tr>
+            <tr><td colspan="2" style="white-space: pre-wrap; padding: 8px;">${improvementText || '-'}</td></tr>
+            
+            <tr><td colspan="2" class="bg-section-title" style="background-color:#d9e1f2; color:#1f4e78;">COMMITMENT CSO</td></tr>
+            <tr><td colspan="2" style="white-space: pre-wrap; padding: 8px;">${commitmentText || '-'}</td></tr>
+            
+            <tr><td colspan="2" class="bg-section-title" style="background-color:#fce4d6; color:#c65911;">Team Leader Note(s):</td></tr>
+            <tr><td colspan="2" style="white-space: pre-wrap; padding: 8px;">${notesText || '-'}</td></tr>
+        `;
+        table.innerHTML = htmlRows;
+
+        const textPreview = document.getElementById('text-preview');
+        let textOutput = `==================================================
+                   LTM RAPOT (${mainMonth})
+==================================================
+Nama CSO     : ${cso.nama}
+Team Leader  : ${cso.leader}
+Finding No   : ${findingVal}
+Date Created : ${dateVal}
+Subject      : COACHING RAPOT CSO ${cso.nama}
+
+- Peringkat CSO  : ${rankVal}
+
+[KELEBIHAN]
+`;
+        
+        cso.metrics.forEach(m => {
+            if(kelebihanList.includes(m.name)) textOutput += `- ${m.name.padEnd(15)}: ${formatDisplayPercent(m.value)}\n`;
+        });
+
+        textOutput += `\n[KEKURANGAN]\n`;
+        cso.metrics.forEach(m => {
+            if(kekuranganList.includes(m.name)) textOutput += `- ${m.name.padEnd(15)}: ${formatDisplayPercent(m.value)}\n`;
+        });
+
+        if (textCompareSection !== "") textOutput += textCompareSection;
+
+        textOutput += `
+NILAI AKHIR ALL  : ${formatDisplayPercent(cso.nilaiAkhirAll)}
+AVG Nilai All CSO (${dateVal}) : ${avgAllVal}
+--------------------------------------------------
+IMPROVEMENT CSO:
+${improvementText || '-'}
+
+COMMITMENT CSO:
+${commitmentText || '-'}
+
+Team Leader Note(s):
+${notesText || '-'}
+==================================================`;
+
+        textPreview.textContent = textOutput;
+        document.getElementById('output-panel').style.display = 'grid';
+    }
+
+    function resetAllData() {
+        if (confirm('Sudah yakin ingin mereset seluruh data memori aplikasi?')) {
+            location.reload();
+        }
+    }
+
+    function copyText() {
+        const text = document.getElementById('text-preview').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Teks LTM Raport berhasil disalin ke clipboard!');
+        });
+    }
+
+    function downloadTxt() {
+        const text = document.getElementById('text-preview').textContent;
+        const csoName = document.getElementById('cso-select').value;
+        const mainMonth = document.getElementById('main-month-select').value.replace(/\s+/g, '_');
+        const blob = new Blob([text], { type: 'text/plain' });
+        const anchor = document.createElement('a');
+        anchor.download = `LTM_Raport_${mainMonth}_${csoName.replace(/\s+/g, '_')}.txt`;
+        anchor.href = window.URL.createObjectURL(blob);
+        anchor.target = '_blank';
+        anchor.style.display = 'none';
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+    }
+</script>
+
+</body>
+</html>
