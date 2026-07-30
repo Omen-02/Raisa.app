@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAISA_Raport</title>
-    <!-- Library SheetJS untuk membaca Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Library Chart.js untuk Grafik -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
@@ -46,7 +44,7 @@
         .bg-gray-sub { background-color: #f2f2f2; font-weight: bold; }
         .bg-section-title { background-color: #e2efda; font-weight: bold; color: #375623; }
         .bg-compare-title { background-color: #fcf3cf; font-weight: bold; color: #9a7d0a; text-align: center; }
-        .val-col { text-align: center; width: 35%; font-weight: bold; }
+        .val-col { text-align: center; font-weight: bold; } /* width dinamis dihapus agar menyesuaikan multi-kolom */
         
         .input-inline { width: 100%; border: none; background: transparent; text-align: center; font-weight: bold; font-size: 12px; }
         pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; font-size: 12px; margin: 0; white-space: pre-wrap; }
@@ -54,23 +52,38 @@
         .trend-up { color: #27ae60; font-weight: bold; }
         .trend-down { color: #c0392b; font-weight: bold; }
         .trend-flat { color: #7f8c8d; font-weight: bold; }
+        
+        /* Desain Kapsul (Pill) untuk Multi-Bulan */
+        .compare-checkbox { display: none; }
+        .compare-chip {
+            display: inline-block;
+            padding: 6px 14px;
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            user-select: none;
+        }
+        .compare-checkbox:checked + .compare-chip {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+            box-shadow: 0 2px 6px rgba(52, 152, 219, 0.4);
+            transform: translateY(-1px);
+        }
+        .compare-chip:hover { background-color: #e2e8f0; }
+        .compare-checkbox:checked + .compare-chip:hover { background-color: #2980b9; }
+
         #toast-notification {
-            visibility: hidden;
-            min-width: 280px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 14px;
-            position: fixed;
-            z-index: 9999;
-            left: 50%;
-            bottom: 30px;
-            transform: translateX(-50%);
-            font-size: 14px;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-            transition: visibility 0.5s, opacity 0.5s ease-in-out;
-            opacity: 0;
+            visibility: hidden; min-width: 280px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 6px; padding: 14px; position: fixed;
+            z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-size: 14px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            transition: visibility 0.5s, opacity 0.5s ease-in-out; opacity: 0;
         }
         #toast-notification.show { visibility: visible; opacity: 1; }
         #toast-notification.error { background-color: #e74c3c; }
@@ -80,7 +93,7 @@
 <body>
 
 <div class="container">
-    <h2>RAISA_app</h2>
+    <h2>RAISA_app.</h2>
     <div class="sub">Raport Analysis Integrated System Automation_org.awam</div>
     
     <div class="upload-section">
@@ -100,14 +113,12 @@
                 <select id="main-month-select" onchange="onMonthChange()"></select>
             </div>
             <div>
-                <label>⚖️ Bandingkan Bulan :</label>
-               
-                <div id="compare-container" style="background:#fff; border:1px solid #ccc; padding:8px; border-radius:4px; max-height:80px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:10px;">
-                    
+                <label>⚖️ Bandingkan Bulan(Pilih):</label>
+                <div id="compare-container" style="display:flex; flex-wrap:wrap; gap:10px; margin-top: 5px;">
                 </div>
             </div>
         </div>
-           
+
         <div class="cso-selection-container">
             <div>
                 <label for="cso-select"><strong>Cari Data:</strong> Pilih CSO:</label>
@@ -169,10 +180,8 @@
             </div>
             <pre id="text-preview"></pre>
         </div>
-
-        <!-- AREA GRAFIK CHART.JS -->
         <div class="card" style="grid-column: 1 / -1; margin-top: 15px;">
-            <div class="card-title">📊Performa Metrik CSO</div>
+            <div class="card-title">📊 Perform Metrix CSO</div>
             <div style="position: relative; height: 320px; width: 100%;">
                 <canvas id="csoPerformanceChart"></canvas>
             </div>
@@ -187,7 +196,7 @@
 
 <script>
     let appDatabase = {}; 
-    let myChartInstance = null; // Variabel global untuk menampung Chart
+    let myChartInstance = null; 
 
     function showToast(message, isError = false) {
         let toast = document.getElementById('toast-notification');
@@ -196,7 +205,7 @@
         setTimeout(function() { toast.className = toast.className.replace("show", ""); }, 6000); 
     }
 
-    // --- AUTO-LOAD FILE DI FOLDER DENGAN JUMLAH DINAMIS ---
+  
     window.addEventListener('DOMContentLoaded', async function() {
         if (window.location.protocol === 'file:') {
             document.getElementById('detect-info').innerHTML = `<strong>Info:</strong> Mode manual aktif (Dibuka dari folder lokal). Silakan gunakan tombol upload di atas.`;
@@ -241,7 +250,7 @@
         }
     });
 
-    // --- EVENT LISTENER UNTUK UPLOAD MANUAL ---
+    // klo gagal 
     document.getElementById('upload-excel').addEventListener('change', function(e) {
         let files = e.target.files;
         if (files.length === 0) return;
@@ -462,27 +471,23 @@
         let avgAllFinal = countAvg > 0 ? (sumAvg / countAvg) : 0;
 
         appDatabase[foundDateStr] = {
-            csoList: localData,
-            rankings: localRankings,
-            teamOrders: localTeamOrders,
-            avgAll: avgAllFinal,
-            shortMonth: localShortMonth,
-            shortYear: localShortYear
+            csoList: localData, rankings: localRankings, teamOrders: localTeamOrders,
+            avgAll: avgAllFinal, shortMonth: localShortMonth, shortYear: localShortYear
         };
 
         if (localData.length > 0) {
             updateMonthDropdowns(foundDateStr);
             document.getElementById('control-panel').style.display = 'block';
-            
         }
     }
 
-   function updateMonthDropdowns(selectedMonth) {
+    // --- FUNGSI UPDATE DROPDOWN DAN CHIPS/KAPSUL MULTI-BULAN ---
+    function updateMonthDropdowns(selectedMonth) {
         const mainSelect = document.getElementById('main-month-select');
         const compareContainer = document.getElementById('compare-container');
         
-        // Simpan centangan sebelumnya agar tidak hilang saat data baru dimuat
-        let checkedMonths = Array.from(compareContainer.querySelectorAll('input:checked')).map(cb => cb.value);
+        let checkedCb = Array.from(compareContainer.querySelectorAll('.compare-checkbox:checked'));
+        let checkedMonths = checkedCb.map(cb => cb.value);
         
         mainSelect.innerHTML = '';
         compareContainer.innerHTML = '';
@@ -495,43 +500,54 @@
             if(m === selectedMonth) opt1.selected = true;
             mainSelect.appendChild(opt1);
 
-            // 2. Buat Checkbox untuk Multi-Perbandingan
-            let lbl = document.createElement('label');
-            lbl.style.display = 'inline-flex';
-            lbl.style.alignItems = 'center';
-            lbl.style.fontWeight = 'normal';
-            lbl.style.cursor = 'pointer';
-            lbl.style.fontSize = '12px';
+            // 2. Buat Modern Chip (Kapsul) untuk Multi-Perbandingan
+            let wrapper = document.createElement('div');
             
             let cb = document.createElement('input');
             cb.type = 'checkbox';
+            cb.id = 'chip-' + m.replace(/\s+/g, '-'); 
             cb.value = m;
-            cb.className = 'compare-cb';
+            cb.className = 'compare-checkbox';
             if (checkedMonths.includes(m)) cb.checked = true;
-            // Saat dicentang, langsung perbarui tabel dan grafik
             cb.onchange = updateOutputs;
 
-            lbl.appendChild(cb);
-            lbl.appendChild(document.createTextNode(' ' + m));
-            compareContainer.appendChild(lbl);
+            let lbl = document.createElement('label');
+            lbl.htmlFor = 'chip-' + m.replace(/\s+/g, '-'); 
+            lbl.className = 'compare-chip';
+            lbl.textContent = m;
+
+            wrapper.appendChild(cb);
+            wrapper.appendChild(lbl);
+            compareContainer.appendChild(wrapper);
         });
 
         onMonthChange();
     }
 
-    function onMonthChange() {
+   function onMonthChange() {
         const mainMonth = document.getElementById('main-month-select').value;
         if(!mainMonth || !appDatabase[mainMonth]) return;
+
+        const compareWrappers = document.querySelectorAll('#compare-container > div');
+        compareWrappers.forEach(wrapper => {
+            const checkbox = wrapper.querySelector('.compare-checkbox');
+            if (checkbox.value === mainMonth) {
+                wrapper.style.display = 'none';
+                checkbox.checked = false;     
+            } else {
+                wrapper.style.display = '';    
+            }
+        });
+        // --------------------------------------------------------------------------
 
         let dataObj = appDatabase[mainMonth];
         document.getElementById('manual-date').value = mainMonth;
         document.getElementById('avg-all').value = formatDisplayPercent(dataObj.avgAll);
         document.getElementById('label-avg').textContent = `AVG Nilai All CSO (${mainMonth}) :`;
         
-        document.getElementById('detect-info').innerHTML = `
-            <strong>File Terbaca!</strong> Bulan <strong>${mainMonth}</strong>, total ditemukan <strong>${dataObj.csoList.length} Data CSO</strong>.`;
-
+        document.getElementById('detect-info').innerHTML = `<strong>File Terbaca!</strong> Bulan <strong>${mainMonth}</strong>, total <strong>${dataObj.csoList.length} CSO</strong>.`;
         document.getElementById('search-cso').value = '';
+        
         populateSelectOptions(dataObj.csoList);
         
         document.getElementById('output-panel').style.display = 'none';
@@ -561,17 +577,9 @@
         if(!mainMonth || !appDatabase[mainMonth]) return;
         let fullList = appDatabase[mainMonth].csoList;
 
-        if (!keyword) {
-            populateSelectOptions(fullList);
-            return;
-        }
+        if (!keyword) { populateSelectOptions(fullList); return; }
 
-        const filtered = fullList.filter(cso => {
-            return cso.nama.toLowerCase().includes(keyword) || 
-                   cso.leader.toLowerCase().includes(keyword) || 
-                   cso.leaderCode.toLowerCase().includes(keyword);
-        });
-
+        const filtered = fullList.filter(cso => cso.nama.toLowerCase().includes(keyword) || cso.leader.toLowerCase().includes(keyword) || cso.leaderCode.toLowerCase().includes(keyword));
         populateSelectOptions(filtered);
         if (filtered.length === 1) {
             document.getElementById('cso-select').value = filtered[0].nama;
@@ -607,31 +615,16 @@
         }
     }
 
-    function formatDisplayPercent(val) {
-        return (val * 100).toFixed(2) + '%';
-    }
+    function formatDisplayPercent(val) { return (val * 100).toFixed(2) + '%'; }
 
-    function getTrendIcon(valNow, valOld, metricName) {
-        if(valNow === valOld) return '<span class="trend-flat">(--)</span>';
-        let isSTSP = (metricName === "ST-SP");
-        if(isSTSP) {
-            if(valNow < valOld) return '<span class="trend-up">▲ Naik (Lebih Baik)</span>';
-            return '<span class="trend-down">▼ Turun</span>';
-        } else {
-            if(valNow > valOld) return '<span class="trend-up">▲ Naik</span>';
-            return '<span class="trend-down">▼ Turun</span>';
-        }
-    }
-
-    function updateOutputs() {
+    //ini output-
+   function updateOutputs() {
         const csoName = document.getElementById('cso-select').value;
         const mainMonth = document.getElementById('main-month-select').value;
         
-        // Ambil semua bulan pembanding yang dicentang user
-        let compareMonths = Array.from(document.querySelectorAll('.compare-cb:checked')).map(cb => cb.value);
-        compareMonths = compareMonths.filter(m => m !== mainMonth); // Jangan bandingkan dengan diri sendiri
+        let compareMonths = Array.from(document.querySelectorAll('.compare-checkbox:checked')).map(cb => cb.value);
+        compareMonths = compareMonths.filter(m => m !== mainMonth); 
         
-        // Urutkan berdasarkan waktu terlama ke terbaru
         let allMonthsOrder = Object.keys(appDatabase);
         compareMonths.sort((a, b) => allMonthsOrder.indexOf(a) - allMonthsOrder.indexOf(b));
         
@@ -671,10 +664,9 @@
                 : `CSO berkomitmen untuk konsisten menjaga target performa dibulan berikutnya.`;
         }
 
-        // Tentukan jumlah kolom tabel secara dinamis
         let colCount = compareMonths.length > 0 ? compareMonths.length + 2 : 2;
-
         const table = document.getElementById('table-preview');
+        // TABEL
         let htmlRows = `
             <tr><th colspan="${colCount}" class="bg-green-header">LTM RAPOT (${mainMonth})</th></tr>
             <tr><td class="bg-gray-sub">Nama CSO</td><td class="val-col" colspan="${colCount - 1}" style="text-align:left;">${cso.nama}</td></tr>
@@ -682,17 +674,14 @@
             <tr><td class="bg-gray-sub">Finding No</td><td class="val-col" colspan="${colCount - 1}" style="text-align:left;">${findingVal}</td></tr>
             <tr><td class="bg-gray-sub">Date Created</td><td class="val-col" colspan="${colCount - 1}" style="text-align:left;">${dateVal}</td></tr>
             <tr><td class="bg-gray-sub">Subject</td><td class="val-col" colspan="${colCount - 1}" style="text-align:left;">COACHING RAPOT CSO ${cso.nama}</td></tr>
+            <tr><td class="bg-gray-sub" style="color:#27ae60;">PERINGKAT CSO</td><td class="val-col" colspan="${colCount - 1}" style="font-size:14px; color:#27ae60;">${rankVal}</td></tr>
+            <tr><td colspan="${colCount}" class="bg-section-title">KELEBIHAN</td></tr>
         `;
 
-        if (compareMonths.length === 0) {
-            htmlRows += `<tr><td>PERINGKAT CSO</td><td class="val-col">${rankVal}</td></tr>`;
-        }
-
-        htmlRows += `<tr><td colspan="${colCount}" class="bg-section-title">KELEBIHAN</td></tr>`;
         let k_count = 0;
         cso.metrics.forEach(m => {
             if (kelebihanList.includes(m.name)) {
-                htmlRows += `<tr><td>${m.name}</td><td class="val-col" colspan="${colCount - 1}">${formatDisplayPercent(m.value)}</td></tr>`;
+                htmlRows += `<tr><td>${m.name}</td><td class="val-col" colspan="${colCount - 1}"style="text-align:right;">${formatDisplayPercent(m.value)}</td></tr>`;
                 k_count++;
             }
         });
@@ -702,26 +691,38 @@
         let kr_count = 0;
         cso.metrics.forEach(m => {
             if (kekuranganList.includes(m.name)) {
-                htmlRows += `<tr><td>${m.name}</td><td class="val-col" colspan="${colCount - 1}" style="color:#c0392b;">${formatDisplayPercent(m.value)}</td></tr>`;
+                htmlRows += `<tr><td>${m.name}</td><td class="val-col" colspan="${colCount - 1}" style="color:#c0392b; text-align:right;">${formatDisplayPercent(m.value)}</td></tr>`;
                 kr_count++;
             }
         });
         if(kr_count === 0) htmlRows += `<tr><td colspan="${colCount}" style="text-align:center; color:#999; font-style:italic;">Tidak ada</td></tr>`;
 
+        htmlRows += `
+            <tr><td class="bg-gray-sub">NILAI AKHIR ALL</td><td class="val-col" colspan="${colCount - 1}" style="background-color: #fff2cc;text-align:right;">${formatDisplayPercent(cso.nilaiAkhirAll)}</td></tr> 
+            <tr><td class="bg-gray-sub">AVG Nilai All CSO</td><td class="val-col" colspan="${colCount - 1}" style="background-color:#fce4d6; color:#c65911;text-align:right;">${avgAllVal}</td></tr> 
+        `;
+
+        // IMPROVEMENT & COMMITMENT
+        htmlRows += `
+            <tr><td colspan="${colCount}" class="bg-section-title" style="background-color:#d9e1f2; color:#1f4e78;">IMPROVEMENT CSO</td></tr>
+            <tr><td colspan="${colCount}" style="white-space: pre-wrap; padding: 10px 15px; text-align: left;">${document.getElementById('input-improvement').value || '-'}</td></tr>
+            <tr><td colspan="${colCount}" class="bg-section-title" style="background-color:#d9e1f2; color:#1f4e78;">COMMITMENT CSO</td></tr>
+            <tr><td colspan="${colCount}" style="white-space: pre-wrap; padding: 10px 15px; text-align: left;">${document.getElementById('input-commitment').value || '-'}</td></tr>
+            <tr><td colspan="${colCount}" class="bg-section-title" style="background-color:#fce4d6; color:#c65911;">Team Leader Note(s):</td></tr>
+            <tr><td colspan="${colCount}" style="white-space: pre-wrap; padding: 10px 15px; text-align: left;">${document.getElementById('input-notes').value || '-'}</td></tr>
+        `;
+
         let textCompareSection = "";
         
-        // --- BAGIAN KOMPARASI MULTI-BULAN ---
+        
         if (compareMonths.length > 0) {
-            htmlRows += `<tr><td colspan="${colCount}" class="bg-compare-title">⚖️ TREN PERBANDINGAN MULTI-BULAN</td></tr>`;
-            
-            // Header Tabel
+            htmlRows += `<tr><td colspan="${colCount}" class="bg-compare-title" style="margin-top: 10px;">⚖️ PERBANDINGAN BULAN (${compareMonths[0]} - ${mainMonth})</td></tr>`;
             htmlRows += `<tr style="background:#f2f2f2; font-size:11px;"><td style="text-align:center;"><b>Metrik</b></td>`;
             compareMonths.forEach(m => { htmlRows += `<td style="text-align:center;"><b>${m}</b></td>`; });
             htmlRows += `<td style="text-align:center;"><b>${mainMonth} (Utama)</b></td></tr>`;
 
-            // Baris Peringkat
             htmlRows += `<tr><td>PERINGKAT CSO</td>`;
-            let rankTextLine = `- Peringkat CSO  : `;
+            let rankTextLine = `- Tren Peringkat     : `;
             compareMonths.forEach((m, idx) => {
                 let rVal = allCompareData[idx] ? (appDatabase[m].rankings[csoName.toLowerCase()] || '-') : '-';
                 htmlRows += `<td class="val-col">${rVal}</td>`;
@@ -729,14 +730,12 @@
             });
             htmlRows += `<td class="val-col"><b>${rankVal}</b></td></tr>`;
             
-            textCompareSection += `\n[TREN PERBANDINGAN MULTI-BULAN]\n`;
+            textCompareSection += `\n--------------------------------------------------\n[PERBANDINGAN BULAN]\n`;
             textCompareSection += rankTextLine + `${rankVal}\n`;
 
-            // Baris Metrik
             cso.metrics.forEach(mNow => {
                 htmlRows += `<tr><td>${mNow.name}</td>`;
-                let textLine = `- ${mNow.name.padEnd(15)}: `;
-                
+                let textLine = `- ${mNow.name.padEnd(19)}: `;
                 compareMonths.forEach((m, idx) => {
                     let mOldVal = 0;
                     if (allCompareData[idx]) {
@@ -746,25 +745,44 @@
                     htmlRows += `<td class="val-col" style="font-size:11px;">${formatDisplayPercent(mOldVal)}</td>`;
                     textLine += `${formatDisplayPercent(mOldVal)} -> `;
                 });
-                
                 htmlRows += `<td class="val-col" style="font-size:11px;"><b>${formatDisplayPercent(mNow.value)}</b></td></tr>`;
                 textCompareSection += textLine + `${formatDisplayPercent(mNow.value)}\n`;
             });
-        }
 
-        htmlRows += `
-            <tr><td class="bg-gray-sub">NILAI AKHIR ALL</td><td class="val-col" colspan="${colCount - 1}" style="background-color: #fff2cc;">${formatDisplayPercent(cso.nilaiAkhirAll)}</td></tr> 
-            <tr><td class="bg-gray-sub">AVG Nilai All CSO</td><td class="val-col" colspan="${colCount - 1}" style="background-color:#fce4d6; color:#c65911;">${avgAllVal}</td></tr> 
-            <tr><td colspan="${colCount}" class="bg-section-title" style="background-color:#d9e1f2; color:#1f4e78;">IMPROVEMENT CSO</td></tr>
-            <tr><td colspan="${colCount}" style="white-space: pre-wrap; padding: 8px;">${document.getElementById('input-improvement').value || '-'}</td></tr>
-            <tr><td colspan="${colCount}" class="bg-section-title" style="background-color:#d9e1f2; color:#1f4e78;">COMMITMENT CSO</td></tr>
-            <tr><td colspan="${colCount}" style="white-space: pre-wrap; padding: 8px;">${document.getElementById('input-commitment').value || '-'}</td></tr>
-            <tr><td colspan="${colCount}" class="bg-section-title" style="background-color:#fce4d6; color:#c65911;">Team Leader Note(s):</td></tr>
-            <tr><td colspan="${colCount}" style="white-space: pre-wrap; padding: 8px;">${document.getElementById('input-notes').value || '-'}</td></tr>
-        `;
+            htmlRows += `<tr><td class="bg-gray-sub">NILAI AKHIR ALL</td>`;
+            let txtAkhir = `- NILAI AKHIR ALL    : `;
+            let csoSum = 0, csoCount = 0;
+
+            compareMonths.forEach((m, idx) => {
+                let val = allCompareData[idx] ? allCompareData[idx].nilaiAkhirAll : 0;
+                if(allCompareData[idx]) { csoSum += val; csoCount++; }
+                htmlRows += `<td class="val-col" style="background-color: #fff2cc;">${formatDisplayPercent(val)}</td>`;
+                txtAkhir += `${formatDisplayPercent(val)} -> `;
+            });
+            htmlRows += `<td class="val-col" style="background-color: #fff2cc;"><b>${formatDisplayPercent(cso.nilaiAkhirAll)}</b></td></tr>`;
+            txtAkhir += `${formatDisplayPercent(cso.nilaiAkhirAll)}\n`;
+
+            csoSum += cso.nilaiAkhirAll; csoCount++;
+            let avgCsoSelection = csoCount > 0 ? (csoSum / csoCount) : 0;
+            htmlRows += `<tr><td class="bg-gray-sub">AVG Nilai CSO (${csoCount} Bln)</td>`;
+            htmlRows += `<td class="val-col" colspan="${colCount - 1}" style="background-color:#d4edda; color:#155724;"><b>${formatDisplayPercent(avgCsoSelection)}</b></td></tr>`;
+            let txtAvgCso = `- AVG Nilai CSO (${csoCount} Bln): ${formatDisplayPercent(avgCsoSelection)}\n`;
+
+            htmlRows += `<tr><td class="bg-gray-sub">AVG Nilai All CSO</td>`;
+            let txtAvgAll = `- AVG Nilai All CSO  : `;
+            compareMonths.forEach(m => {
+                let val = appDatabase[m] ? appDatabase[m].avgAll : 0;
+                htmlRows += `<td class="val-col" style="background-color:#fce4d6; color:#c65911;">${formatDisplayPercent(val)}</td>`;
+                txtAvgAll += `${formatDisplayPercent(val)} -> `;
+            });
+            htmlRows += `<td class="val-col" style="background-color:#fce4d6; color:#c65911;"><b>${avgAllVal}</b></td></tr>`;
+            txtAvgAll += `${avgAllVal}\n`;
+
+            textCompareSection += txtAkhir + txtAvgCso + txtAvgAll;
+        }
         table.innerHTML = htmlRows;
 
-        // Proses Text Output (.txt)
+        
         const textPreview = document.getElementById('text-preview');
         let textOutput = `==================================================
                    LTM RAPOT (${mainMonth})
@@ -775,91 +793,73 @@ Finding No   : ${findingVal}
 Date Created : ${dateVal}
 Subject      : COACHING RAPOT CSO ${cso.nama}
 
-[KELEBIHAN]\n`;
-        cso.metrics.forEach(m => { if(kelebihanList.includes(m.name)) textOutput += `- ${m.name.padEnd(15)}: ${formatDisplayPercent(m.value)}\n`; });
-        textOutput += `\n[KEKURANGAN]\n`;
-        cso.metrics.forEach(m => { if(kekuranganList.includes(m.name)) textOutput += `- ${m.name.padEnd(15)}: ${formatDisplayPercent(m.value)}\n`; });
+- Peringkat CSO  : ${rankVal}
 
-        if (textCompareSection !== "") textOutput += textCompareSection;
+[KELEBIHAN]\n`;
+        cso.metrics.forEach(m => { if(kelebihanList.includes(m.name)) textOutput += `- ${m.name.padEnd(19)}: ${formatDisplayPercent(m.value)}\n`; });
+        textOutput += `\n[KEKURANGAN]\n`;
+        cso.metrics.forEach(m => { if(kekuranganList.includes(m.name)) textOutput += `- ${m.name.padEnd(19)}: ${formatDisplayPercent(m.value)}\n`; });
 
         textOutput += `
-NILAI AKHIR ALL  : ${formatDisplayPercent(cso.nilaiAkhirAll)}
-AVG Nilai All CSO: ${avgAllVal}
+NILAI AKHIR ALL      : ${formatDisplayPercent(cso.nilaiAkhirAll)}
+AVG Nilai All CSO    : ${avgAllVal}
+
 --------------------------------------------------
-IMPROVEMENT CSO:
+[IMPROVEMENT CSO]
 ${document.getElementById('input-improvement').value || '-'}
 
-COMMITMENT CSO:
+[COMMITMENT CSO]
 ${document.getElementById('input-commitment').value || '-'}
 
-Team Leader Note(s):
+[Team Leader Note(s)]
 ${document.getElementById('input-notes').value || '-'}
-==================================================`;
+`;
+        if (textCompareSection !== "") textOutput += textCompareSection;
+        textOutput += `\n==================================================`;
 
         textPreview.textContent = textOutput;
         document.getElementById('output-panel').style.display = 'grid';
 
-        // Panggil grafik
+        // GRAFIK
         renderCsoChart(cso, mainMonth, compareMonths, allCompareData);
     }
 
+   
     function renderCsoChart(cso, mainMonth, compareMonthsArray, allCompareDataArray) {
         const ctx = document.getElementById('csoPerformanceChart').getContext('2d');
         let labels = cso.metrics.map(m => m.name);
-        
         let datasets = [];
         
-        // Warna palet untuk berbagai bulan pembanding agar tidak membosankan
         const compareColors = [
-            { bg: 'rgba(52, 152, 219, 0.6)', border: 'rgba(41, 128, 185, 1)' }, // Biru
-            { bg: 'rgba(155, 89, 182, 0.6)', border: 'rgba(142, 68, 173, 1)' }, // Ungu
-            { bg: 'rgba(230, 126, 34, 0.6)', border: 'rgba(211, 84, 0, 1)' },   // Oranye
-            { bg: 'rgba(241, 196, 15, 0.6)', border: 'rgba(243, 156, 18, 1)' }  // Kuning
+            { bg: 'rgba(52, 152, 219, 0.6)', border: 'rgba(41, 128, 185, 1)' },
+            { bg: 'rgba(155, 89, 182, 0.6)', border: 'rgba(142, 68, 173, 1)' },
+            { bg: 'rgba(230, 126, 34, 0.6)', border: 'rgba(211, 84, 0, 1)' },
+            { bg: 'rgba(241, 196, 15, 0.6)', border: 'rgba(243, 156, 18, 1)' }
         ];
 
-        // 1. Data Multi-Bulan Pembanding (Muncul di sebelah kiri Grafik)
         compareMonthsArray.forEach((m, idx) => {
             let color = compareColors[idx % compareColors.length];
             let compCso = allCompareDataArray[idx];
-            
             let dataValues = labels.map(label => {
                 if(!compCso) return 0;
                 let mOld = compCso.metrics.find(x => x.name === label);
                 return mOld ? parseFloat((mOld.value * 100).toFixed(2)) : 0;
             });
-
-            datasets.push({
-                label: m,
-                data: dataValues,
-                backgroundColor: color.bg,
-                borderColor: color.border,
-                borderWidth: 1,
-                borderRadius: 4
-            });
+            datasets.push({ label: m, data: dataValues, backgroundColor: color.bg, borderColor: color.border, borderWidth: 1, borderRadius: 4 });
         });
 
-        // 2. Data Bulan Utama (Selalu muncul paling Kanan dan berwarna Hijau/Merah)
         let dataValuesMain = cso.metrics.map(m => parseFloat((m.value * 100).toFixed(2)));
         let bgColorsMain = cso.metrics.map(m => {
             if (m.name === "ST-SP") return m.value === 0 ? 'rgba(39, 174, 96, 0.8)' : 'rgba(192, 57, 43, 0.8)';
             return m.value >= 1.0 ? 'rgba(39, 174, 96, 0.8)' : 'rgba(192, 57, 43, 0.8)';
         });
 
-        datasets.push({
-            label: mainMonth + ' (Utama)',
-            data: dataValuesMain,
-            backgroundColor: bgColorsMain,
-            borderColor: bgColorsMain.map(c => c.replace('0.8', '1')),
-            borderWidth: 1,
-            borderRadius: 4
-        });
+        datasets.push({ label: mainMonth + ' (Utama)', data: dataValuesMain, backgroundColor: bgColorsMain, borderColor: bgColorsMain.map(c => c.replace('0.8', '1')), borderWidth: 1, borderRadius: 4 });
 
-        // 3. Render Chart.js
         if (myChartInstance) myChartInstance.destroy();
 
         myChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: labels, datasets: datasets },
+            type: 'bar', data: { labels: labels, datasets: datasets },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true, max: 120, ticks: { callback: v => v + '%' } } },
@@ -871,19 +871,11 @@ ${document.getElementById('input-notes').value || '-'}
         });
     }
 
-    function resetAllData() {
-        if (confirm('Sudah yakin ingin mereset seluruh data memori aplikasi?')) {
-            location.reload();
-        }
-    }
-
+    function resetAllData() { if (confirm('Sudah yakin ingin mereset seluruh data memori aplikasi?')) { location.reload(); } }
     function copyText() {
         const text = document.getElementById('text-preview').textContent;
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Teks LTM Raport berhasil disalin ke clipboard!');
-        });
+        navigator.clipboard.writeText(text).then(() => { alert('Teks LTM Raport berhasil disalin ke clipboard!'); });
     }
-
     function downloadTxt() {
         const text = document.getElementById('text-preview').textContent;
         const csoName = document.getElementById('cso-select').value;
@@ -892,11 +884,8 @@ ${document.getElementById('input-notes').value || '-'}
         const anchor = document.createElement('a');
         anchor.download = `LTM_Raport_${mainMonth}_${csoName.replace(/\s+/g, '_')}.txt`;
         anchor.href = window.URL.createObjectURL(blob);
-        anchor.target = '_blank';
-        anchor.style.display = 'none';
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
+        anchor.target = '_blank'; anchor.style.display = 'none';
+        document.body.appendChild(anchor); anchor.click(); document.body.removeChild(anchor);
     }
 </script>
 
