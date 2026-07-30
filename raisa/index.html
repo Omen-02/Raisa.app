@@ -189,25 +189,27 @@
         }, 6000); 
     }
 
-    // --- AUTO-LOAD FILE DI FOLDER MENGGUNAKAN ASYNC/AWAIT ---
+    // --- AUTO-LOAD FILE DI FOLDER DENGAN JUMLAH DINAMIS ---
     window.addEventListener('DOMContentLoaded', async function() {
-       if (window.location.protocol === 'file:') {
-            // Langsung tampilkan info manual & toast tanpa mencoba fetch yang pasti diblokir
+        
+        // 1. Cek apakah dibuka langsung dari file komputer (file://)
+        if (window.location.protocol === 'file:') {
             document.getElementById('detect-info').innerHTML = `<strong>Info:</strong> Mode manual aktif (Dibuka dari folder lokal). Silakan gunakan tombol upload di atas.`;
             showToast("Mode Manual Aktif: Silakan upload file Excel secara manual.", true);
-            return; // Hentikan proses agar tidak error
+            return;
         }
 
-        // 2. Jika dibuka lewat server (http://), baru jalankan auto-load normal
+        // 2. Daftar file Excel sesuai dengan nama file asli di folder Anda
         const localFilesInFolder = [
-            { label: "april 2026", filename: "RAPORT APRIL 26.xlsx" },
-            { label: "juni 2026", filename: "RAPOT JUNI 26.xlsx" },
-            { label: "mei 2026", filename: "RAPORT MEI 26.xlsx" }
-           
+            { label: "April 2026", filename: "RAPORT APRIL 26.xlsx" },
+            { label: "Mei 2026", filename: "RAPORT MEI 26.xlsx" },
+            { label: "Juni 2026", filename: "RAPORT JUNI 26.xlsx" }
+            // Jika nanti ditambah file baru, cukup tambahkan di sini tanpa ubah kodingan lain
         ];
+
         let loadedCount = 0;
 
-        for (const fileInfo of localFilesInFolder) {
+        await Promise.all(localFilesInFolder.map(async (fileInfo) => {
             try {
                 let response = await fetch(fileInfo.filename);
                 if (response.ok) {
@@ -216,41 +218,26 @@
                     let workbook = XLSX.read(data, { type: 'array', cellNF: true, cellText: true });
                     parseExcelDataSilent(workbook, fileInfo.label, fileInfo.filename);
                     loadedCount++;
+                } else {
+                    console.warn(`File ${fileInfo.filename} tidak ditemukan (404).`);
                 }
             } catch (err) {
-                console.log(`Auto-load dilewati untuk: ${fileInfo.filename}`);
+                console.log(`Auto-load gagal untuk: ${fileInfo.filename}`, err);
             }
-        }
+        }));
 
         if (loadedCount > 0) {
             let firstMonth = Object.keys(appDatabase)[0];
             updateMonthDropdowns(firstMonth);
             document.getElementById('control-panel').style.display = 'block';
+            
+            // JUMLAH AKAN OTOMATIS MENYESUAIKAN BERAPA FILE YANG BERHASIL DILOAD
+            showToast(`Berhasil memuat ${loadedCount} file raport secara otomatis!`);
         } else {
-            document.getElementById('detect-info').innerHTML = `<strong>Info:</strong> Mode manual aktif. Silakan pilih file Excel melalui tombol upload di atas.`;
+            document.getElementById('detect-info').innerHTML = `<strong>Info:</strong> File di server tidak ditemukan. Gunakan upload manual.`;
+            showToast("File otomatis tidak ditemukan. Silakan upload manual.", true);
         }
     });
-
-    document.getElementById('upload-excel').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        let fileName = file.name;
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            try {
-                const data = evt.target.result;
-                const workbook = XLSX.read(data, { type: 'binary', cellNF: true, cellText: true });
-                parseExcelDataFull(workbook, fileName);
-            } catch(err) {
-                alert('Gagal membaca file Excel. Error: ' + err.message);
-                console.error(err);
-            }
-        };
-        reader.readAsBinaryString(file);
-        e.target.value = ''; 
-    });
-
     function parseExcelDataFull(workbook, fileName) {
         processWorkbookToDatabase(workbook, null, fileName);
     }
